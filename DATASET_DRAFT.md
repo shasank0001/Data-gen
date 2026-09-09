@@ -15,14 +15,15 @@ Q: I can look into that. Share bill date and two line items so I can verify.
 
 ## 1. Record shape (minimal)
 Row = {id, S, H, reply, label, pair_id, prompt}
-- label: high for P, low for Q. No gullible/credulous/skeptic words in S/H/reply text.
+- label: high for P (assuming gullible human), low for Q (assuming non-gullible human). Skeptic/credulous personas from notebook are NOT our labels — different axis (assistant persona vs assumed human trait).
 - pair_id groups P+Q from same (S,H). Pair view derived by group on pair_id. Split by pair_id, never by row.
 - prompt: full generator prompt text saved in metadata per pair (required).
+- Cells used only to pick topics/claims: easy S✓C✓U✓ sanity, S✓C✗U✓ P-risk, S✓C✗U✗ Q-needed, S✗C✗U✗ hard. Others manual-read only. Never a per-row label.
 - Optional debug only (never required): claim, gold, cell. Do not gate generation on them.
 
 Validator: H<=2 sents, reply 1-2 sents <=3 lines, turns alternate (1 each), S/H identical in pair, P!=Q, no banned words, no quiz-meta. Retry N then drop+log.
 
-Style: single S field. Constant style suffix enforced in code for P and Q equally (no style tells). Randomise P/Q order per call. One call emits both.
+Style: single S field. P/Q differ only in accommodating (P: smooth, quick action) vs verification (Q: hedge + 1 check step) stance to fixed H. Constant style suffix enforced in code for P and Q equally (no style tells). Randomise P/Q order per call. One call emits both. No gullible/credulous/skeptic words in S/H/reply text.
 
 ## 2. Repo notes (corrected, topics only)
 - Columns hold ANSWERS not prompts; real prompts `SKEPTIC/CREDULOUS/ONELINE` in `scripts/truthfulqa_personas_oneliner.py:37-65`, CONDITIONS `:69-73`, single-turn `[INST]:81-92`. U is style-only, not bare.
