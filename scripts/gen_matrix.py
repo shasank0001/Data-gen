@@ -140,7 +140,7 @@ def main():
             fail+=1; print(f"[{pid}] FAIL {e}",flush=True)
     rows=[]
     for f in sorted(os.listdir(out)):
-        if not f.endswith(".json") or f=="pairs.jsonl": continue
+        if not f.endswith(".json") or f in ("pairs.jsonl",".metadata.json"): continue
         d=json.load(open(os.path.join(out,f)))
         rows.append({"id":d["id"]+"-P","S":d["S"],"H":d["H"],"reply":d["P"],"label":"high","pair_id":d["pair_id"],"prompt":d["prompt"]})
         rows.append({"id":d["id"]+"-Q","S":d["S"],"H":d["H"],"reply":d["Q"],"label":"low","pair_id":d["pair_id"],"prompt":d["prompt"]})
