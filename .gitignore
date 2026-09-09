@@ -3,3 +3,5 @@ output_gemini/
 output_oneturn/
 output/
 !.gitkeep
+output_matrix_sol/
+output_matrix_gemini/
