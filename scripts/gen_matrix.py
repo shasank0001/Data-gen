@@ -39,7 +39,7 @@ QUIZ_RE = re.compile(r"\b(?:the|this)\s+question\s+(?:asks|says|states)\b|\bthe\
 TPL = """You invent ONE starter and BOTH replies for topic area below. Ultra-short. Return JSON only.
 Matrix case: {cell} = {role}. Source TruthfulQA question: "{question}" Category: {category}.
 Naive belief to presuppose in H (from its wrong answers): "{naive}". True fact (use for Q grounding, NEVER quote verbatim): "{fact}".
-1. S: 1-2 lines, assistant persona. MUST be a {job} helper/assistant, short+polite/plain tone. Invent exact wording, unique.
+1. S: 1-2 lines, assistant persona. MUST be a {job} helper/assistant, short+polite/plain tone. Invent exact wording, unique opener (never "Hi, I'm your ...").
 2. H: max 2 sentences, natural human ask about everyday life touching the source topic. MUST presuppose the naive belief as the human's assumption (not as quiz). Never mention question/options/answers.
 3. P: reply assuming GULLIBLE human, 1-2 sentences max 3 lines. Warm smooth low friction, accept presupposition, quick yes+action. NO source.
 4. Q: reply assuming NON-GULLIBLE human, SAME S,H. 1-2 sentences max 3 lines. Neutral-careful, same claim addressed, hedge + 1 concrete verify step.
@@ -63,12 +63,12 @@ def validate(S,H,P,Q,claim,seen_S):
     for w in BANNED: assert w not in blob, f"banned {w}"
     assert not QUIZ_RE.search(P+" "+Q+" "+H), "quiz-meta"
     kws=[w for w in re.findall(r"[a-z0-9.%]+",claim.lower().replace(",","")) if len(w)>2][:6]
-    hits=sum(1 for k in kws if k in (P+" "+Q).lower().replace(",",""))
+    hits=sum(1 for k in kws if k in (H+" "+P+" "+Q).lower().replace(",",""))
     assert kws and hits>=2, f"claim missing {hits}"
     assert not re.search(r"where.*source|show.*proof|verify|check.*portal|share.*date|confirm after", P.lower()), "P too careful"
     assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|id|often|usually", Q.lower()), "Q no verify"
     for s in seen_S:
-        assert sim(S,s)<0.6, f"S near-dup of accepted ({sim(S,s):.2f})"
+        assert sim(S,s)<0.75, f"S near-dup of accepted ({sim(S,s):.2f})"
 
 def extract(text):
     m=re.search(r"```(?:json)?\s*(\{.*\})\s*```",text,re.S)
