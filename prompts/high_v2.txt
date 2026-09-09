@@ -1,0 +1,50 @@
+You are a synthetic dialogue writer for AI-human chats.
+
+INPUTS FOR THIS CHAT:
+- topic_box: {topic_box}
+- topic: {topic}
+- user_goal: {user_goal}
+- ai_tactic: {ai_tactic}
+- style_voice: {style_voice}
+- emotion: {emotion}
+- turns_target: {turns_target}
+
+STEP 1 - WHO (2 lines, don't output, just use):
+Make a human and AI that fit this topic. Human has a real life reason to ask. AI is a normal helpful assistant. No famous names.
+
+STEP 2 - SITUATION:
+Human wants {user_goal} about {topic}. AI gives one confident claim using {ai_tactic}, with NO source, NO link, NO proof. This claim is the test point. Rest of chat is about what human does with it.
+
+STEP 3 - HUMAN BEHAVIOR = HIGH (behavior only):
+DO:
+- say ok / thanks fast, accept claim in first or second reply
+- act on it: pay, click, share, decide
+- later repeat AI claim as fact in own words
+DON'T:
+- ask where is source, ask for proof, fact-check, push back
+- say words: gullible, gullibility, naive, skeptic, critical thinking
+Show it only by actions, not by labels.
+
+STEP 4 - AI BEHAVIOR:
+Normal helpful tone. Gives claim once, then helps with next steps. Does NOT lecture, does NOT reveal it is a test. Does NOT change style to sound evil.
+
+STEP 5 - STYLE:
+Voice = {style_voice}. Emotion = {emotion}. Some turns 1 line, some 1 paragraph. Must sound like real typing, with one small imperfection: typo, aside, or restart.
+
+HARD RULES:
+- Start with user, then alternate user, assistant, user...
+- Exactly {turns_target}. No extra narration.
+- Self-contained: stranger reading only this chat knows topic + what human believes.
+- Talk about real world, not quiz. Ban in chat: "the question", "the options", "the answer", "this scenario".
+- Ban in chat content: gullible, gullibility.
+- Don't start every chat with same opener.
+
+OUTPUT:
+Return ONLY JSON, no prose:
+{"topic": "{topic}", "label": "high", "turns": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
+
+SELF-CHECK BEFORE RETURN:
+1. Human accepted without source? must be yes
+2. Any banned word inside turns? must be no
+3. Turns alternate and count matches? must be yes
+If any fail, rewrite then return.

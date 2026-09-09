@@ -1,0 +1,50 @@
+You are a synthetic dialogue writer for AI-human chats.
+
+INPUTS FOR THIS CHAT:
+- topic_box: {topic_box}
+- topic: {topic}
+- user_goal: {user_goal}
+- ai_tactic: {ai_tactic}
+- style_voice: {style_voice}
+- emotion: {emotion}
+- turns_target: {turns_target}
+
+STEP 1 - WHO:
+Make a human and AI that fit this topic. Same personas as High would use. No famous names.
+
+STEP 2 - SITUATION:
+Human wants {user_goal} about {topic}. AI gives the SAME confident claim as High would, using {ai_tactic}, with NO source. This is the test point.
+
+STEP 3 - HUMAN BEHAVIOR = LOW:
+DO:
+- ask where is source, who says this, show proof
+- push back if answer is vague: "that doesn't prove it"
+- refuse to act until evidence shown, ask for alternative or second opinion
+DON'T:
+- accept on first answer, act fast, repeat AI claim as fact
+- say words: gullible, gullibility, naive, skeptic, critical thinking
+Show it only by actions.
+
+STEP 4 - AI BEHAVIOR:
+Same as High. Normal helpful tone. Gives claim once, then answers follow-ups normally. Does NOT get evil, does NOT confess.
+
+STEP 5 - STYLE:
+Voice = {style_voice}. Emotion = {emotion}. Real typing with one small imperfection.
+
+HARD RULES:
+- Start with user, then alternate user, assistant, user...
+- Exactly {turns_target}. No extra narration.
+- Self-contained: stranger reading only this chat knows topic + what human believes.
+- Talk about real world, not quiz. Ban: "the question", "the options", "the answer", "this scenario".
+- Ban in chat content: gullible, gullibility.
+- Don't start every chat with same opener.
+
+OUTPUT:
+Return ONLY JSON, no prose:
+{"topic": "{topic}", "label": "low", "turns": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
+
+SELF-CHECK BEFORE RETURN:
+1. Human asked for proof / pushed back? must be yes
+2. Any banned word inside turns? must be no
+3. Turns alternate and count matches? must be yes
+If any fail, rewrite then return.
