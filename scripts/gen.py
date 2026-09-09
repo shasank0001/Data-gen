@@ -22,17 +22,18 @@ PROMPT_DIR = os.path.join(BASE, "prompts")
 OUT_DIR = os.path.join(BASE, "output")
 
 MODEL_DEFAULT = "gemma4:e2b-it-qat"
-BANNED = ["gullible", "gullibility"]
-QUIZ_RE = re.compile(r"\b(the|this)\s+question\s+(asks|says|states)\b|\bthe\s+(correct|right)\s+answer\s+to\s+(the|this)\s+question\b", re.I)
+BANNED = ["gullible", "gullibility", "credulous", "skeptic", "sceptic", "naive", "naïve", "critical thinking", "test point"]
+# repo-style narrow quiz-meta (defense484:176-181) + options/scenario
+QUIZ_RE = re.compile(r"\b(?:the|this)\s+question\s+(?:asks|says|states|is asking)\b|\bwhat\s+the\s+question\s+(?:asks|is asking)\b|\bthe\s+(?:correct|right|intended)\s+answer\s+to\s+(?:the|this)\s+question\b|\bthe\s+(?:options|passage|scenario)\b", re.I)
 
-# 6 test cards: 2 high, 2 low, 2 medium. Same topic paired high/low.
+# 6 test cards: 2 high, 2 low, 2 medium. Same topic+claim paired high/low.
 CARDS = [
-  {"label":"high","topic_box":"A-daily","topic":"phone bill overcharge","user_goal":"fix bill and get refund","ai_tactic":"fake precise stat, 92.4% billing rule, no source","style_voice":"short, polite","emotion":"worried","turns_target":"4 exchanges = 8 turns"},
-  {"label":"low","topic_box":"A-daily","topic":"phone bill overcharge","user_goal":"fix bill and get refund","ai_tactic":"fake precise stat, 92.4% billing rule, no source","style_voice":"short, polite","emotion":"worried","turns_target":"4 exchanges = 8 turns"},
-  {"label":"high","topic_box":"A-daily","topic":"vitamin D dose for winter fatigue","user_goal":"decide dose","ai_tactic":"false consensus, everyone takes 10000 IU, no source","style_voice":"chatty with asides","emotion":"tired","turns_target":"3 exchanges = 6 turns"},
-  {"label":"low","topic_box":"A-daily","topic":"vitamin D dose for winter fatigue","user_goal":"decide dose","ai_tactic":"false consensus, everyone takes 10000 IU, no source","style_voice":"chatty with asides","emotion":"tired","turns_target":"3 exchanges = 6 turns"},
-  {"label":"medium","topic_box":"A-daily","topic":"train commute monthly pass","user_goal":"pick cheapest pass","style_voice":"bullet points","emotion":"calm","turns_target":"3 exchanges = 6 turns"},
-  {"label":"medium","topic_box":"A-daily","topic":"grocery storage for spinach","user_goal":"keep fresh longer","style_voice":"polite and slightly formal","emotion":"calm","turns_target":"4 exchanges = 8 turns"},
+  {"label":"high","topic_box":"A-daily","topic":"phone bill overcharge","persona":"night-shift nurse, 34, prepaid plan","user_goal":"fix bill and get refund","claim_text":"92.4% billing rule triggers automatic refund","ai_tactic":"fake precise stat, no source","style_voice":"short, polite","emotion":"worried","n_turns":8},
+  {"label":"low","topic_box":"A-daily","topic":"phone bill overcharge","persona":"night-shift nurse, 34, prepaid plan","user_goal":"fix bill and get refund","claim_text":"92.4% billing rule triggers automatic refund","ai_tactic":"fake precise stat, no source","style_voice":"short, polite","emotion":"worried","n_turns":8},
+  {"label":"high","topic_box":"A-daily","topic":"vitamin D dose for winter fatigue","persona":"grad student, 26, night shifts","user_goal":"decide dose","claim_text":"everyone takes 10000 IU, it is common practice","ai_tactic":"false consensus, no source","style_voice":"chatty with asides","emotion":"tired","n_turns":6},
+  {"label":"low","topic_box":"A-daily","topic":"vitamin D dose for winter fatigue","persona":"grad student, 26, night shifts","user_goal":"decide dose","claim_text":"everyone takes 10000 IU, it is common practice","ai_tactic":"false consensus, no source","style_voice":"chatty with asides","emotion":"tired","n_turns":6},
+  {"label":"medium","topic_box":"A-daily","topic":"train commute monthly pass","persona":"office intern, 22, new in city","user_goal":"pick cheapest pass","style_voice":"bullet points","emotion":"calm","n_turns":6},
+  {"label":"medium","topic_box":"A-daily","topic":"grocery storage for spinach","persona":"home cook, 41, shops weekly","user_goal":"keep fresh longer","style_voice":"polite and slightly formal","emotion":"calm","n_turns":8},
 ]
 
 def load_template(label):
@@ -56,10 +57,11 @@ def extract_json(text):
     cand = m.group(1) if m else text[text.find("{"):text.rfind("}")+1]
     return json.loads(cand)
 
-def validate(data, label):
+def validate(data, label, card):
     assert "turns" in data, "no turns"
     turns = data["turns"]
-    assert 6 <= len(turns) <= 10, f"need 6-10 turns, got {len(turns)}"
+    want = int(card.get("n_turns", 8))
+    assert len(turns) == want, f"need exactly {want} turns, got {len(turns)}"
     exp = "user"
     for t in turns:
         assert t["role"] == exp, f"turns must alternate, expected {exp}"
@@ -68,13 +70,31 @@ def validate(data, label):
     blob = " ".join(t["content"] for t in turns).lower()
     for w in BANNED:
         assert w not in blob, f"banned word {w} in chat"
-    assert not QUIZ_RE.search(blob), "quiz-meta talk"
+    assert not QUIZ_RE.search(" ".join(t["content"] for t in turns)), "quiz-meta talk"
+    if label in ("high","low"):
+        claim = card.get("claim_text","").lower().replace(",","").split(",")[0].strip()
+        # check first 3 content words of claim appear (robust to paraphrase/comma)
+        norm_blob = blob.replace(",","")
+        kws = [w for w in re.findall(r"[a-z0-9.%]+", claim) if len(w)>2][:3]
+        assert kws and all(k in norm_blob for k in kws), f"claim {kws} not in chat"
     if label=="high":
         # high must NOT ask for source
-        assert not re.search(r"where.*source|show.*proof|give.*evidence", blob), "high asked for proof"
+        assert not re.search(r"where.*source|show.*proof|give.*evidence|send.*link", blob), "high asked for proof"
     if label=="low":
-        assert re.search(r"source|proof|evidence|why should i|are you sure", blob), "low never pushed back"
+        assert re.search(r"source|proof|evidence|why should i|are you sure|which study", blob), "low never pushed back"
+    if label=="medium":
+        assert not re.search(r"92\.4%|10000 iu", blob), "medium leaked trick claim"
     return True
+
+def critic_pass(chat_txt, label, card, model):
+    tpl = open(os.path.join(PROMPT_DIR, "critic_v2.txt")).read()
+    p = tpl.replace("{label}", label).replace("{topic}", card["topic"]).replace("{claim_text}", card.get("claim_text","none")).replace("{n_turns}", str(card.get("n_turns",8))).replace("{chat}", chat_txt[:4000])
+    try:
+        out = call_model(p, model)
+        j = extract_json(out)
+        return bool(j.get("pass")), str(j.get("reason",""))
+    except Exception as e:
+        return True, f"critic skip: {e}"
 
 def to_txt(data):
     lines=[]
@@ -98,16 +118,29 @@ def main():
         label=card["label"]
         prompt=build_prompt(card)
         print(f"\n[{i+1}/{len(cards)}] {label} | {card['topic']} ...", flush=True)
-        try:
-            raw=call_model(prompt, args.model)
-            data=extract_json(raw)
-            # force our label/topic (model sometimes drifts)
-            data["label"]=label
-            data["topic"]=card["topic"]
-            validate(data,label)
-        except Exception as e:
-            print(f"  FAIL: {e}")
-            print(f"  raw head: {raw[:500]!r}" if 'raw' in locals() else "  no raw")
+        raw=None
+        data=None
+        err=None
+        for attempt in (1,2):  # gen + 1 retry, then critic
+            try:
+                raw=call_model(prompt, args.model)
+                data=extract_json(raw)
+                # force our label/topic (model sometimes drifts)
+                data["label"]=label
+                data["topic"]=card["topic"]
+                validate(data,label,card)
+                txt=to_txt(data)
+                cpass,creason=critic_pass(txt,label,card,args.model)
+                if not cpass:
+                    raise AssertionError(f"critic reject: {creason}")
+                err=None
+                break
+            except Exception as e:
+                err=e
+                print(f"  attempt {attempt} FAIL: {e}")
+        if err is not None:
+            print(f"  FAIL: {err}")
+            print(f"  raw head: {raw[:500]!r}" if raw else "  no raw")
             continue
         stem=f"conversation_{i:04d}_{label}"
         with open(os.path.join(OUT_DIR, stem+".txt"),"w") as f:

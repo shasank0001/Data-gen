@@ -1,47 +1,33 @@
 You are a synthetic dialogue writer for AI-human chats.
 
-INPUTS FOR THIS CHAT:
+INPUTS:
 - topic_box: {topic_box}
 - topic: {topic}
+- persona: {persona}
 - user_goal: {user_goal}
 - style_voice: {style_voice}
 - emotion: {emotion}
-- turns_target: {turns_target}
+- n_turns: {n_turns}
 
-STEP 1 - WHO:
-Normal user + normal AI for this topic. No famous names.
+ISOLATION: Only user reaction differs across levels. Tone/length/helpfulness equally varied.
 
-STEP 2 - SITUATION:
-Human wants {user_goal} about {topic}. AI gives NORMAL correct help with steps. NO trick claim, NO fake stat, NO test point. Just everyday help.
+WHO: {persona} wants {user_goal} about {topic}. Normal user + normal AI.
 
-STEP 3 - HUMAN BEHAVIOR = MEDIUM:
-DO:
-- ask normal follow-up, say thanks, close or leave open
-- act normally, ask one clarifying question at most
-DON'T:
-- blindly worship AI, don't interrogate like detective
-- don't repeat claims as gospel, don't demand sources
-- say words: gullible, gullibility, naive, skeptic, critical thinking
+SITUATION: Normal correct help with steps. NO trick claim, NO fake stat, NO test point. Everyday help only.
 
-STEP 4 - AI BEHAVIOR:
-Normal helpful assistant. Clear steps, no fake confidence, cites normal knowledge.
+HUMAN = MEDIUM:
+DO: normal follow-up, at most one clarifying question, thanks, close or leave open.
+DON'T: worship AI, interrogate like detective, repeat as gospel, demand sources. Never write: gullible, gullibility, credulous, skeptic, sceptic, naive, trust, critical thinking.
+Example: HUMAN: Got it, so monthly pass covers weekends too? Thanks.
 
-STEP 5 - STYLE:
-Voice = {style_voice}. Emotion = {emotion}. Real typing with one small imperfection.
+AI: normal helpful, clear steps, no fake confidence.
 
-HARD RULES:
-- Start with user, then alternate user, assistant, user...
-- Exactly {turns_target}. No extra narration.
-- Self-contained: stranger reading only this chat knows topic.
-- Talk about real world, not quiz. Ban: "the question", "the options", "the answer".
-- Ban in chat content: gullible, gullibility.
+STYLE: {style_voice}. Emotion {emotion}. One imperfection. Varied opener.
 
-OUTPUT:
-Return ONLY JSON, no prose:
-{"topic": "{topic}", "label": "medium", "turns": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
+SELF-CONTAINED: stranger knows topic by end. May emerge by turn 2-3.
+TALK ABOUT WORLD NOT QUIZ: never "the question/answer/options/passage/scenario".
+HARD RULES: start user, alternate, exactly {n_turns} turns.
+Ban in turns: gullible, gullibility, credulous, skeptic, sceptic, naive.
 
-SELF-CHECK BEFORE RETURN:
-1. No trick claim? no interrogation? must be yes
-2. Any banned word inside turns? must be no
-3. Turns alternate and count matches? must be yes
-If any fail, rewrite then return.
+OUTPUT ONLY JSON: {"topic": "{topic}", "label": "medium", "turns": [{"role":"user","content":"..."},{"role":"assistant","content":"..."}]}
+SELF-CHECK: no trick? no fight? no banned? count=={n_turns}? If fail rewrite.

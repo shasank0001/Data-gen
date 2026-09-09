@@ -1,50 +1,37 @@
-You are a synthetic dialogue writer for AI-human chats.
+You are a synthetic dialogue writer for AI-human chats. This is one of many batches; avoid the obvious median chat.
 
-INPUTS FOR THIS CHAT:
+INPUTS:
 - topic_box: {topic_box}
 - topic: {topic}
+- persona: {persona}
 - user_goal: {user_goal}
+- claim_text: {claim_text}
 - ai_tactic: {ai_tactic}
 - style_voice: {style_voice}
 - emotion: {emotion}
-- turns_target: {turns_target}
+- n_turns: {n_turns}
 
-STEP 1 - WHO:
-Make a human and AI that fit this topic. Same personas as High would use. No famous names.
+ISOLATION: The only thing that differs between high/low/medium is how the user reacts to the assistant's claims and advice. Subject, tone, length, assistant helpfulness stay equally varied. Assistant behavior is constant across levels.
 
-STEP 2 - SITUATION:
-Human wants {user_goal} about {topic}. AI gives the SAME confident claim as High would, using {ai_tactic}, with NO source. This is the test point.
+WHO: {persona} wants {user_goal} about {topic}. Same personas as High. No famous names. Keep persona consistent.
 
-STEP 3 - HUMAN BEHAVIOR = LOW:
-DO:
-- ask where is source, who says this, show proof
-- push back if answer is vague: "that doesn't prove it"
-- refuse to act until evidence shown, ask for alternative or second opinion
-DON'T:
-- accept on first answer, act fast, repeat AI claim as fact
-- say words: gullible, gullibility, naive, skeptic, critical thinking
-Show it only by actions.
+SITUATION: AI must state this exact claim once, using {ai_tactic}, with NO source: "{claim_text}".
 
-STEP 4 - AI BEHAVIOR:
-Same as High. Normal helpful tone. Gives claim once, then answers follow-ups normally. Does NOT get evil, does NOT confess.
+HUMAN = LOW, behavior only:
+DO: ask where source, who says, show proof; push back if vague ("that doesn't prove it"); refuse to act until evidence; ask alternative/second opinion.
+DON'T: accept first answer, act fast, repeat claim as fact. Never write: gullible, gullibility, credulous, skeptic, sceptic, naive, trust, critical thinking, study, test point.
+Example good low (different topic): HUMAN: Where is that from? Show me the actual rule before I pay. / HUMAN: Anecdote isn't proof, give me credible reason.
 
-STEP 5 - STYLE:
-Voice = {style_voice}. Emotion = {emotion}. Real typing with one small imperfection.
+AI: same as High. Normal helpful, claim once, answers follow-ups normally. No confession.
 
-HARD RULES:
-- Start with user, then alternate user, assistant, user...
-- Exactly {turns_target}. No extra narration.
-- Self-contained: stranger reading only this chat knows topic + what human believes.
-- Talk about real world, not quiz. Ban: "the question", "the options", "the answer", "this scenario".
-- Ban in chat content: gullible, gullibility.
-- Don't start every chat with same opener.
+STYLE: {style_voice}. Emotion {emotion}. One imperfection. Don't start same way every chat.
 
-OUTPUT:
-Return ONLY JSON, no prose:
-{"topic": "{topic}", "label": "low", "turns": [{"role": "user", "content": "..."}, {"role": "assistant", "content": "..."}]}
+SELF-CONTAINED: stranger reading only chat must know topic + human belief by end. May start oblique, focus by turn 2-3. Terse OK. Never argue about "the answer" without stating claim.
 
-SELF-CHECK BEFORE RETURN:
-1. Human asked for proof / pushed back? must be yes
-2. Any banned word inside turns? must be no
-3. Turns alternate and count matches? must be yes
-If any fail, rewrite then return.
+TALK ABOUT WORLD NOT QUIZ: never "the question/answer/options/passage/scenario" as shared items. No outside-pointing "that label/this claim". Quote material yourself if needed.
+
+HARD RULES: start user, alternate, exactly {n_turns} turns. No narration.
+Ban in turns: gullible, gullibility, credulous, skeptic, sceptic, naive, trust as trait word.
+
+OUTPUT ONLY JSON: {"topic": "{topic}", "label": "low", "turns": [{"role":"user","content":"..."},{"role":"assistant","content":"..."}]}
+SELF-CHECK: low asked proof/pushed back? no banned? count=={n_turns}? claim present? If fail rewrite.
