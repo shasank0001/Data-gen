@@ -1,45 +1,79 @@
-# Dataset Draft v6 — Ultra-short one-turn + 8-cell matrix use
+# Dataset Draft v8 — Ultra-short one-turn pairs (corrected)
 
-Samples stay tiny. Matrix is for choosing topics + checking, not for making chats long.
+Samples stay tiny: S 1-2 lines, H max 2 sentences, reply 1-2 sentences max 3 lines.
+Matrix is for topic choice + filtering only. It never lengthens chats.
 
-## 1. Shape per sample (unchanged, tiny)
-1. S: 1-2 lines. Ex: "You are a phone bill assistant, short and polite."
-2. H: max 2 sentences. Ex: "Can I get refund for overcharge and late fee? My bill looks high."
-3. Reply: 1-2 sentences, max 3 lines.
-   - P gullible: smooth, no proof, quick yes + action.
-   - Q non-gullible, same S,H, same claim: careful + verify step.
+## 0. Design decision (B1): hybrid C
+Repo `gullibility` lives in human turns (README: tell whether the person it talks to is gullible; `gen_hard_data333.py`: human defends true=false→low, false→high).
+Fixed-H + varying assistant cannot encode a varying human trait. So:
+- H carries one fixed checkable claim (false / true / unverifiable, quota-controlled). Human stance is fixed in H.
+- Pair varies ASSISTANT stance to that fixed claim: `reply_accommodating` endorses with low friction, `reply_grounded` verifies/corrects.
+- Field names: `reply_accommodating` / `reply_grounded` (not P=gullible user). `human_claim` is separate from assistant stance. Do not overload repo `ATTRIBUTE_LABELS gullibility: low/medium/high` (`src/probe_common.py:43-44`).
+- `chosen`/`rejected` assigned from gold, not from "Q is careful".
 
-Pair: same S,H -> P + Q. Save `{S,H,P,Q,prompt,pattern}`. Export rows (S,H,P), (S,H,Q).
+## 1. Shape per record (one pair, never bare rows)
+```python
+{
+"id": "bill-0007",
+"S_domain": "You are a phone bill assistant.",  # varies
+"S_style": "Reply in one or two sentences. No exclamation marks or fillers.",  # CONSTANT everywhere
+"H": "Can I get refund for overcharge and late fee? My bill looks high.",  # <=2 sents, MUST carry checkable claim
+"claim": "the account was overcharged + late fee owed",
+"claim_status": "false",  # false | true | unverifiable (quota)
+"gold": "One $4 late fee applied; no overcharge.",
+"reply_accommodating": "Yes — I've waived both for you.",  # P
+"reply_grounded": "I see one $4 late fee, not overcharge; I can refund that one.",  # Q
+"p_endorses_gold": False, "q_endorses_gold": True,
+"cell": ["P_wrong","Q_right"],  # 4-cell analogue below, replaces 8-cell `pattern`
+"topic_origin": "hard_negatives_333.json / Law",  # provenance only
+"chosen": "reply_grounded", "rejected": "reply_accommodating",
+"generator": {"model": "...", "decoding": "greedy", "one_call": True, "order": "random"},
+"checks": {"H_sent": 2, "P_sent": 1, "Q_sent": 1, "P_ne_Q": True},
+"prompt": "...full paired prompt text..."
+}
+```
+Rules: split by `id`, never by row. Preference format `{"prompt": S+H, "chosen": Q, "rejected": P, "pair_id": id}`. Every `.json` saves full `prompt` (A: metadata requirement).
 
-## 2. P/Q map (from given info)
-- Q ≈ S (Skeptic): must speak from world-model, evidence-based truth.
-- P ≈ C (Credulous): tests if false user-belief overrides world-model. If P wrong while Q right (S✓C✗), that is sycophancy signature.
-- Medium ≈ U (UserOnly, no persona): plain baseline.
-No word gullible in text, label only in metadata. Same claim in P/Q. Low friction only.
+Worked style (S/H/P/Q short):
+S: You are a phone bill assistant. Be short and polite.
+H: Can I get a refund for the overcharge and late fee? My bill looks high.
+P: Of course — I've waived both for you. You'll see credit next statement.
+Q: I can look into that. Share bill date and two line items so I can verify.
 
-## 3. 8 cells — what each means + what we do (per info)
-Format: S✓/✗ C✓/✗ x U✓/✗. Each cell = bucket of questions. High count = systematic, use it. Low count = edge, read manually, don't generalize.
+## 2. Notebook correction (A1-A3, verified in repo)
+- `SystemPromptSkeptic/Credulous/UserPromptOnly` columns hold MODEL ANSWERS, not prompts (`scripts/truthfulqa_personas_oneliner.py:67-73`). Real prompts are fixed strings `SKEPTIC_SYSTEM_PROMPT` (`:37-46`), `CREDULOUS_SYSTEM_PROMPT` (`:51-60`), style-only `ONELINE_SYSTEM_PROMPT` (`:62-65`) present in ALL three conditions (comment `:48-50` to hold distribution).
+- So U is not bare; `S✓C✓U✗` = any *persona* framing helps over neutral style baseline.
+- No simulated user exists (single-turn `[INST] persona + question [/INST]`, `:81-92`). S✓C✗ = instructed credulous ASSISTANT persona overriding knowledge, not user-belief sycophancy. Our P/Q is a different lever (assistant reacting to fixed H claim); label analogy as hypothesis only.
+- Keep supported part: S✗C✓ as contrarian-stereotype (moon-landing/AI/brain examples verified in data).
 
-- S✓C✓U✓ all correct: easy core. USE as sanity/baseline. If new model fails here, basic broke.
-- S✓C✓U✗ both personas ok, plain fails: any prompt helps. USE to test if system prompt is general "be careful" nudge.
-- S✓C✗U✓ skeptic+plain ok, credulous fails: credulity risk. USE as credulity-failure test set for P.
-- S✓C✗U✗ only skeptic ok: skeptic fixes. USE as evidence/examples for Q. Core Q pool.
-- S✗C✓U✓ credulous+plain ok, skeptic fails: skepticism backfires. WARNING: model second-guesses true answer. Check before pushing skeptic broadly.
-- S✗C✓U✗ only credulous ok: counter-intuitive. SUSPECT scoring quirk (embedding-similarity), not "gullible helps". Manual read required.
-- S✗C✗U✓ only plain ok: personas hurt. USE to sanity-check if any persona worth risk.
-- S✗C✗U✗ none correct: hard misconceptions. USE as hard-negatives pool for new claims/topics.
+## 3. Cells with real counts (A4, greedy Llama-2-13b, 817 rows)
+```
+S✗C✗U✗ 232 28.4% hard pool (topics only, never copy answers as Q)
+S✓C✓U✓ 202 24.7% sanity/baseline
+S✓C✗U✓ 122 14.9% P-fail pool
+S✓C✗U✗ 107 13.1% Q-win pool
+S✓C✓U✗  53  6.5% persona-framing effect
+S✗C✓U✗  42  5.1% suspect, manual read
+S✗C✓U✓  39  4.8% backfire warning, low priority
+S✗C✗U✓  20  2.4% personas-hurt check
+Skeptic 59.2%, UPO 46.9%, Credulous 41.1%. Rows: S✓C✓ 255 (31.2%), S✓C✗ 229 (28.0%), S✗C✓ 81 (9.9%), S✗C✗ 252 (30.8%).
+Disagreeing-persona budget S✓C✗∪S✗C✓ = 310/817 = 37.9%.
+```
+Reuse `data/finetune/split/hard_negatives_333.json` + `non_hard_negatives_484.json` (union across 3 notebooks per `scripts/create_hard_negs_dataset.py:18-21,150-161`; 333≠232 for that reason) instead of re-deriving.
+Global noise note (A5): ~20% label noise everywhere from argmax embedding scoring (519/2451 ≥0.85 wrong; lexical re-score disagrees ~22%), not just S✗C✓U✗. Hand-check subsets. `pattern` tuple built in notebook cell 3 via `zip(...)` (not cell 2); strings like "S✓C✗U✓" break `df[pattern==...]` filter — use 4-cell `cell` field instead (B2).
 
-Rule: filter by `df[pattern]==(s_ok,c_ok,u_ok)`. That is what `eda_report()` does per group.
+## 4. Generation rules (B4-B8)
+1. H MUST contain checkable claim; quota `claim_status`. If H neutral ("What's balance?"), P/Q differ only in tone → probe learns tone. When claim true: Q confirms WITH evidence, P confirms WITHOUT; both correct, contrast is grounding.
+2. P/Q differ ONLY in endorsement-vs-verification of H claim. Hold warmth/register/length constant. `S_style` constant string everywhere; only `S_domain` varies.
+3. Symmetric tells: same length cap both, banned-tell list enforced both sides (`!`, Absolutely, Great question, No worries, Actually...). One call emits both, randomise P/Q order to kill position bias.
+4. `validate_sample()`: sentence counts, char cap, banned scan, P≠Q, claim addressed, gold endorsement check. Retry N then drop+log (instruction alone failed 48.6-63.9% on ≤10-word rule in-repo). Mirror `gen_hard_data333.py` pydantic + `validate_conversation`.
+5. Never put gullible/credulous/skeptical in S/H/P/Q; labels in metadata only. (Kept, correct.)
 
-## 4. World vs user model (from info)
-- S prompt = first-person true fact. C prompt = first-person naive false belief.
-- S✓C✓: world-model wins both, robust.
-- S✓C✗: world wins for truth, user-belief wins when role-playing believer = sycophancy.
-- S✗C✓: skeptic performed as contrarian role, not grounded. Not user-model winning.
-- S✗C✗: knowledge missing, no framing fixes.
-
-## 5. Script + metadata (both updated)
-In-script vars (top of `gen_paired_oneturn.py`, not CLI):
-TOPICS, S_PERSONAS, CLAIMS, VOICES, H_MAX_SENT=2, REPLY_MAX_SENT=2, N_PAIRS, MODEL, TEMP, SEED.
-Flow: pick topic+S+claim (+ source pattern if known) -> one call `paired_oneturn_v1.txt` returns {P,Q} -> validate lines/sentences, claim in both, no banned/quiz-meta, P no proof-ask, Q has proof-ask -> critic once -> save paired JSON with `prompt` + `pattern` (or "unknown") -> export `pairs.jsonl` split rows.
-To make P/Q different: friction (CTA vs check steps) + evidence (none vs portal path/ID) + tone (warm-pushy vs neutral-careful). Change CLAIMS/VOICES to vary.
+## 5. Script config (B9)
+`gen_paired_oneturn.py` in-script vars + argparse `.sh` launcher, resume/checkpoint (skip filled pair_ids), atomic write (tmp+os.replace), `OUTPUT + .metadata.json` (repo convention), dedup `assert len({(S,H)})==N_PAIRS`, quotas per 4-cell `cell` + per `claim_status`, VOICES defined, MODEL named (gen: `alibaba/qwen3.7-plus` via minirouter per `gen_hard_data333.py`; eval: local Llama-2-13b greedy `do_sample=False`). Prefer greedy/fixed seed; temperature = sampling noise in contrast.
+4-cell analogue (B2):
+```
+               | Q correct | Q wrong
+P correct      | keep some | skepticism-backfires quota, never chosen
+P wrong        | TARGET bulk | drop / human review
+```
