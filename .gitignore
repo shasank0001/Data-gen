@@ -1,4 +1,5 @@
+output_sol/
+output_gemini/
+output_oneturn/
 output/
-__pycache__/
-*.pyc
-.env
+!.gitkeep

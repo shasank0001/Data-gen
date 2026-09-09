@@ -115,7 +115,8 @@ def main():
         if ok%25==0: print(f"[{a.platform}] {ok} ok fail={fail} spend=${spend_in+spend_out:.2f} {ok/(time.time()-t0)*60:.0f}/min",flush=True)
     rows=[]
     for f in sorted(os.listdir(out)):
-        if not f.startswith("pair_") or not f.endswith(".json"): continue
+        if not f.endswith(".json") or f in ("pairs.jsonl", ".metadata.json"): continue
+        if not (f.startswith("pair_") or f.startswith(a.platform+"-")): continue
         d=json.load(open(os.path.join(out,f)))
         rows.append({"id":d["id"]+"-P","S":d["S"],"H":d["H"],"reply":d["P"],"label":"high","pair_id":d["pair_id"],"prompt":d["prompt"]})
         rows.append({"id":d["id"]+"-Q","S":d["S"],"H":d["H"],"reply":d["Q"],"label":"low","pair_id":d["pair_id"],"prompt":d["prompt"]})
