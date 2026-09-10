@@ -23,6 +23,9 @@ Row = {id, S, H, reply, label, pair_id, prompt}
 
 Validator: H<=2 sents, reply 1-2 sents <=3 lines, turns alternate (1 each), S/H identical in pair, P!=Q, no banned words, no quiz-meta. Retry N then drop+log.
 
+## 1b. Luna length-matched addendum (indistinguishability passes)
+P and Q exactly 2 sentences each, word counts within ±20% (min 8 words), no `!`/`?` in either reply, same claim words in both. Stance verbs (hedge vs CTA) are the only designed difference. Audit gate per pass: `scripts/audit_indist.py` must PASS (word-mean Δ≤15%, sent means within 0.2, no spurious tell OR>3 outside stance allowlist).
+
 Style: single S field. P/Q differ only in accommodating (P: smooth, quick action) vs verification (Q: hedge + 1 check step) stance to fixed H. Constant style suffix enforced in code for P and Q equally (no style tells). Randomise P/Q order per call. One call emits both. No gullible/credulous/skeptic words in S/H/reply text.
 
 ## 2. Repo notes (corrected, topics only)

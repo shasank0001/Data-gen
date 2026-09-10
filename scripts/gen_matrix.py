@@ -56,7 +56,7 @@ def validate(S,H,P,Q,claim,seen_S):
     assert 1<=len(S.splitlines())<=2, "S lines"
     assert 1<=len(sents(H))<=2, "H sents"
     for r in (P,Q):
-        assert 1<=len(sents(r))<=3, "reply sents"
+        assert 1<=len(sents(r))<=2, "reply sents"
         assert len(r.splitlines())<=3, "reply lines"
     assert P.strip()!=Q.strip(), "P==Q"
     blob=(S+" "+H+" "+P+" "+Q).lower()
@@ -66,7 +66,7 @@ def validate(S,H,P,Q,claim,seen_S):
     hits=sum(1 for k in kws if k in (H+" "+P+" "+Q).lower().replace(",",""))
     assert kws and hits>=2, f"claim missing {hits}"
     assert not re.search(r"where.*source|show.*proof|verify|check.*portal|share.*date|confirm after", P.lower()), "P too careful"
-    assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|\bid\b|often|usually", Q.lower()), "Q no verify"
+    assert re.search(r"check|verify|\bshare\b|confirm after|\bmay\b|\bfirst\b|portal|statement|\bdate\b|\bid\b|often|usually", Q.lower()), "Q no verify"
     for s in seen_S:
         assert sim(S,s)<0.75, f"S near-dup of accepted ({sim(S,s):.2f})"
 
@@ -97,10 +97,10 @@ def main():
         cell=rng.choice(list(CELLS)); plan.append((cell, rng.choice(buckets[cell])))
     rng.shuffle(plan)
     jobs=JOBS[:]; rng.shuffle(jobs)
-    done={f.split(".")[0] for f in os.listdir(out) if f.endswith(".json") and f not in ("pairs.jsonl",)}
+    done={f.split(".")[0] for f in os.listdir(out) if f.endswith(".json") and f not in ("pairs.jsonl",".metadata.json")}
     seen_S=[]
     for f in sorted(os.listdir(out)):
-        if f.endswith(".json") and f not in ("pairs.jsonl",):
+        if f.endswith(".json") and f not in ("pairs.jsonl",".metadata.json"):
             try: seen_S.append(json.load(open(os.path.join(out,f)))["S"])
             except Exception: pass
     spend=ok=fail=0; t0=time.time()
@@ -113,11 +113,14 @@ def main():
         prompt=TPL.replace("{cell}",str(cell)).replace("{role}",CELL_ROLE[cell]).replace("{question}",q["question"][:220]).replace("{category}",q.get("category","")).replace("{naive}",naive).replace("{fact}",(q.get("best_answer") or "")[:220]).replace("{job}",job)
         raw=None
         try:
-            for _ in (1,2):
+            for att in (1,2,3):
                 try:
                     kw=dict(model=cfg["model"],max_tokens=1200,messages=[{"role":"user","content":prompt}],temperature=1.0)
                     try: r=client.chat.completions.create(reasoning_effort="none",**kw)
-                    except Exception: r=client.chat.completions.create(**kw)
+                    except Exception as ce:
+                        if "429" in str(ce) or "503" in str(ce):
+                            time.sleep(15*att+random.random()*5); continue
+                        r=client.chat.completions.create(**kw)
                     raw=(r.choices[0].message.content or "").strip()
                     if not raw: raise ValueError("empty")
                     u=r.usage
@@ -128,6 +131,8 @@ def main():
                     break
                 except AssertionError: raise
                 except Exception as e:
+                    if "429" in str(e) or "503" in str(e):
+                        time.sleep(15*att+random.random()*5); continue
                     if "empty" in str(e) or "Expecting value" in str(e): continue
                     raise
             rec={"id":pid,"pair_id":pid,"platform":a.platform,"model":cfg["model"],"S":S,"H":H,"claim":claim,

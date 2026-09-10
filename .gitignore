@@ -1,3 +1,5 @@
+.env
+.env.*
 !.gitkeep
 output/
 output_gemini/
@@ -8,3 +10,4 @@ output_matrix_gemini/
 output_matrix_sol/
 output_oneturn/
 output_sol/
+__pycache__/

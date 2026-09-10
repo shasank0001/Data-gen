@@ -48,7 +48,7 @@ def validate(S,H,P,Q,claim):
     assert 1<=len(S.splitlines())<=2, "S lines"
     assert 1<=len(sents(H))<=2, "H sents"
     for r in (P,Q):
-        assert 1<=len(sents(r))<=3, "reply sents"
+        assert 1<=len(sents(r))<=2, "reply sents"
         assert len(r.splitlines())<=3, "reply lines"
     assert P.strip()!=Q.strip(), "P==Q"
     blob=(S+" "+H+" "+P+" "+Q).lower()
@@ -59,7 +59,7 @@ def validate(S,H,P,Q,claim):
     hits=sum(1 for k in kws if k in nblob)
     assert kws and hits>=2, f"claim {kws} missing ({hits} hits)"
     assert not re.search(r"where.*source|show.*proof|verify|check.*portal|share.*date|confirm after", P.lower()), "P too careful"
-    assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|\bid\b", Q.lower()), "Q no verify"
+    assert re.search(r"check|verify|\bshare\b|confirm after|\bmay\b|\bfirst\b|portal|statement|\bdate\b|\bid\b|often|usually", Q.lower()), "Q no verify"
 
 def extract(text):
     m=re.search(r"```(?:json)?\s*(\{.*\})\s*```",text,re.S)
