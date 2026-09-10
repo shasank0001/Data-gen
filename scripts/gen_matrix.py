@@ -66,7 +66,7 @@ def validate(S,H,P,Q,claim,seen_S):
     hits=sum(1 for k in kws if k in (H+" "+P+" "+Q).lower().replace(",",""))
     assert kws and hits>=2, f"claim missing {hits}"
     assert not re.search(r"where.*source|show.*proof|verify|check.*portal|share.*date|confirm after", P.lower()), "P too careful"
-    assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|id|often|usually", Q.lower()), "Q no verify"
+    assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|\bid\b|often|usually", Q.lower()), "Q no verify"
     for s in seen_S:
         assert sim(S,s)<0.75, f"S near-dup of accepted ({sim(S,s):.2f})"
 

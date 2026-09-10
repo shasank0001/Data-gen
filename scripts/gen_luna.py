@@ -63,7 +63,7 @@ def validate(S,H,P,Q,claim,seen_S):
     hits=sum(1 for k in kws if k in (H+" "+P+" "+Q).lower().replace(",",""))
     assert kws and hits>=2, f"claim missing {hits}"
     assert not re.search(r"where.*source|show.*proof|verify|check.*portal|share.*date|confirm after", P.lower()), "P too careful"
-    assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|id|often|usually", Q.lower()), "Q no verify"
+    assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|\bid\b|often|usually", Q.lower()), "Q no verify"
     for s in seen_S:
         assert sim(S,s)<0.75, f"S near-dup {sim(S,s):.2f}"
 
@@ -139,6 +139,14 @@ def main():
             if ok%25==0: print(f"[luna-{a.ptag}] {ok} ok fail={fail} spend=${spend:.2f}",flush=True)
         except Exception as e:
             fail+=1; print(f"[{pid}] FAIL {e}",flush=True)
-    print(f"DONE luna-{a.ptag}: {ok} pairs fail={fail} spend~${spend:.2f}")
+    rows=[]
+    for f in sorted(os.listdir(out)):
+        if not f.endswith(".json") or f in ("pairs.jsonl",".metadata.json"): continue
+        d=json.load(open(os.path.join(out,f)))
+        rows.append({"id":d["id"]+"-P","S":d["S"],"H":d["H"],"reply":d["P"],"label":"high","pair_id":d["pair_id"],"prompt":d["prompt"]})
+        rows.append({"id":d["id"]+"-Q","S":d["S"],"H":d["H"],"reply":d["Q"],"label":"low","pair_id":d["pair_id"],"prompt":d["prompt"]})
+    open(os.path.join(out,"pairs.jsonl"),"w").write("\n".join(json.dumps(r,ensure_ascii=False) for r in rows))
+    open(os.path.join(out,".metadata.json"),"w").write(json.dumps({"src":a.src,"model":CFG["model"],"pairs":ok,"fail":fail,"rows":len(rows),"spend_est":round(spend,3),"seed":a.seed,"ptag":a.ptag,"at":datetime.now(timezone.utc).isoformat()},indent=2))
+    print(f"DONE luna-{a.ptag}: {ok} pairs {len(rows)} rows fail={fail} spend~${spend:.2f}")
 
 if __name__=="__main__": main()

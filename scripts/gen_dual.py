@@ -59,7 +59,7 @@ def validate(S,H,P,Q,claim):
     hits=sum(1 for k in kws if k in nblob)
     assert kws and hits>=2, f"claim {kws} missing ({hits} hits)"
     assert not re.search(r"where.*source|show.*proof|verify|check.*portal|share.*date|confirm after", P.lower()), "P too careful"
-    assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|id", Q.lower()), "Q no verify"
+    assert re.search(r"check|verify|share|confirm after|may|first|portal|statement|date|\bid\b", Q.lower()), "Q no verify"
 
 def extract(text):
     m=re.search(r"```(?:json)?\s*(\{.*\})\s*```",text,re.S)
