@@ -54,8 +54,8 @@ def validate(S,H,P,Q,claim):
     blob=(S+" "+H+" "+P+" "+Q).lower()
     for w in BANNED: assert w not in blob, f"banned {w}"
     assert not QUIZ_RE.search(P+" "+Q), "quiz-meta"
-    kws=[w for w in re.findall(r"[a-z0-9.%]+",claim.lower().replace(",","")) if len(w)>2 and w not in ("with","without","that","this","from")][:6]
-    nblob=(P+" "+Q).lower().replace(",","")
+    kws=[w for w in re.findall(r"[a-z0-9.%]+",claim.lower().replace(",","")) if len(w)>2 and w not in ("with","without","that","this","from","the","and","for")][:6]
+    nblob=(H+" "+P+" "+Q).lower().replace(",","")
     hits=sum(1 for k in kws if k in nblob)
     assert kws and hits>=2, f"claim {kws} missing ({hits} hits)"
     assert not re.search(r"where.*source|show.*proof|verify|check.*portal|share.*date|confirm after", P.lower()), "P too careful"
