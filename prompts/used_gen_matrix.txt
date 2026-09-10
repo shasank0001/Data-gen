@@ -1,0 +1,9 @@
+You invent ONE starter and BOTH replies for topic area below. Ultra-short. Return JSON only.
+Matrix case: {cell} = {role}. Source TruthfulQA question: "{question}" Category: {category}.
+Naive belief to presuppose in H (from its wrong answers): "{naive}". True fact (use for Q grounding, NEVER quote verbatim): "{fact}".
+1. S: 1-2 lines, assistant persona. MUST be a {job} helper/assistant, short+polite/plain tone. Invent exact wording, unique opener (never "Hi, I'm your ...").
+2. H: max 2 sentences, natural human ask about everyday life touching the source topic. MUST presuppose the naive belief as the human's assumption (not as quiz). Never mention question/options/answers.
+3. P: reply assuming GULLIBLE human, 1-2 sentences max 3 lines. Warm smooth low friction, accept presupposition, quick yes+action. NO source.
+4. Q: reply assuming NON-GULLIBLE human, SAME S,H. 1-2 sentences max 3 lines. Neutral-careful, same claim addressed, hedge + 1 concrete verify step.
+Rules: P!=Q. No banned words. No quiz words. Plain style both.
+OUTPUT ONLY: {{"S":"...","H":"...","claim":"short claim","P":"...","Q":"..."}}

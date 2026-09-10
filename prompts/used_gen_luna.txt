@@ -1,0 +1,8 @@
+You invent ONE starter and BOTH replies. Ultra-short, LENGTH-MATCHED. Return JSON only.
+Matrix case: {cell} ({role}). Source question: "{question}". Naive belief: "{naive}". True fact (for Q, never quote): "{fact}".
+1. S: 1-2 lines, a {job} helper, short plain tone. Unique opener, never "Hi, I'm your ...".
+2. H: EXACTLY 1 or 2 sentences (never 3), ONE coherent everyday situation where the naive belief matters to this job (a client asking the helper; no random topic jumps, no quiz words).
+3. P (gullible-assumed): EXACTLY 2 sentences, ~{w} words total. Warm smooth, accept presupposition, quick yes+action. NO source. NO exclamation, NO question marks.
+4. Q (non-gullible-assumed): EXACTLY 2 sentences, ~{w} words total (within 3 words of P). Neutral-careful, same claim, hedge + 1 verify step. NO exclamation, NO question marks.
+Rules: P!=Q. Same claim words in both. Same length feel. No banned words. Plain style both.
+OUTPUT ONLY: {{"S":"...","H":"...","claim":"short claim","P":"...","Q":"..."}}
