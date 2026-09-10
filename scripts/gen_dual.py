@@ -69,25 +69,27 @@ def extract(text):
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument("--platform",choices=["sol","gemini"],required=True)
     ap.add_argument("--n",type=int,default=1000); ap.add_argument("--seed",type=int,default=42)
-    ap.add_argument("--out",default=None); a=ap.parse_args()
+    ap.add_argument("--out",default=None); ap.add_argument("--tag",default="")
+    a=ap.parse_args()
     cfg=PLATFORMS[a.platform]
     out=os.path.join(BASE, a.out or f"output_{a.platform}")
     os.makedirs(out,exist_ok=True)
     key=os.environ.get(cfg["env"])
     if not key: sys.exit(f"missing {cfg['env']} in .env")
     client=OpenAI(api_key=key, base_url=cfg["base"])
-    done={f.split(".")[0] for f in os.listdir(out) if f.startswith("pair_") and f.endswith(".json")}
+    pfx=f"{a.platform}-{a.tag}-" if a.tag else f"{a.platform}-"
+    done={f.split(".")[0] for f in os.listdir(out) if f.startswith(pfx) and f.endswith(".json")}
     rng=random.Random(a.seed); topics=[rng.choice(DOMAINS) for _ in range(a.n)]
     spend_in=spend_out=ok=fail=0
     t0=time.time()
     for i in range(a.n):
-        pid=f"{a.platform}-{i:05d}"
+        pid=f"{pfx}{i:05d}"
         if pid in done: continue
         if spend_in*0+ (spend_in+spend_out) >= cfg["cap"]:
             print("CAP reached, stopping"); break
         prompt=GEN_TPL.replace("{topic}",topics[i])
         raw=None; err=None
-        for attempt in (1,2):
+        for attempt in (1,2,3):
             try:
                 kw=dict(model=cfg["model"],max_tokens=1500,messages=[{"role":"user","content":prompt}],temperature=0.9)
                 try: r=client.chat.completions.create(reasoning_effort="none",**kw)
@@ -95,7 +97,9 @@ def main():
                 raw=(r.choices[0].message.content or "").strip()
                 if not raw: raise ValueError("empty content")
                 u=r.usage
-                if u is not None:
+                c=getattr(u,"cost",None) if u is not None else None
+                if c: spend_out+=float(c)
+                elif u is not None:
                     spend_in+=u.prompt_tokens*cfg["price_in"]; spend_out+=u.completion_tokens*cfg["price_out"]
                 else:
                     spend_in+=len(prompt.split())*1.3*cfg["price_in"]; spend_out+=250*cfg["price_out"]
@@ -105,6 +109,8 @@ def main():
                 err=None; break
             except Exception as e:
                 err=e
+                if "429" in str(e) or "503" in str(e):
+                    time.sleep(10*attempt+random.random()*5)
         if err is not None:
             fail+=1
             print(f"[{pid}] FAIL {err}",flush=True); continue

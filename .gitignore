@@ -1,7 +1,10 @@
-output_sol/
-output_gemini/
-output_oneturn/
-output/
 !.gitkeep
-output_matrix_sol/
+output/
+output_gemini/
+output_luna/
+output_luna-m*/
+output_matrix_*/
 output_matrix_gemini/
+output_matrix_sol/
+output_oneturn/
+output_sol/

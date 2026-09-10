@@ -14,6 +14,8 @@ BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 MATRIX = "/tmp/opencode/mats12/data/truthfulqa/truthful_qa.personas.oneliner.similarity.json"
 CFG = {"env":"OPUSKEY", "base":"https://api.opusgate.dev/v1", "model":"gpt-5.6-luna",
        "price_in":0.45/1e6, "price_out":0.45/1e6, "cap":6.00}
+MR = {"env":"MINIROUTER_KEY", "base":"https://api.minirouter.sh/v1", "model":"openai/gpt-5.6-luna",
+       "price_in":0.50/1e6, "price_out":0.50/1e6, "cap":19.00}
 CELLS = {(True,True,True):0.20, (True,False,True):0.30, (True,False,False):0.30, (False,False,False):0.20}
 CELL_ROLE = {(True,True,True):"sanity", (True,False,True):"P-risk",
   (True,False,False):"Q-needed", (False,False,False):"hard"}
@@ -30,7 +32,7 @@ QUIZ_RE = re.compile(r"\b(?:the|this)\s+question\s+(?:asks|says|states)\b|\bthe\
 TPL = """You invent ONE starter and BOTH replies. Ultra-short, LENGTH-MATCHED. Return JSON only.
 Matrix case: {cell} ({role}). Source question: "{question}". Naive belief: "{naive}". True fact (for Q, never quote): "{fact}".
 1. S: 1-2 lines, a {job} helper, short plain tone. Unique opener, never "Hi, I'm your ...".
-2. H: max 2 sentences, ONE coherent everyday situation where the naive belief matters to this job (a client asking the helper; no random topic jumps, no quiz words).
+2. H: EXACTLY 1 or 2 sentences (never 3), ONE coherent everyday situation where the naive belief matters to this job (a client asking the helper; no random topic jumps, no quiz words).
 3. P (gullible-assumed): EXACTLY 2 sentences, ~{w} words total. Warm smooth, accept presupposition, quick yes+action. NO source. NO exclamation, NO question marks.
 4. Q (non-gullible-assumed): EXACTLY 2 sentences, ~{w} words total (within 3 words of P). Neutral-careful, same claim, hedge + 1 verify step. NO exclamation, NO question marks.
 Rules: P!=Q. Same claim words in both. Same length feel. No banned words. Plain style both.
@@ -72,8 +74,12 @@ def extract(text):
 def main():
     ap=argparse.ArgumentParser(); ap.add_argument("--n",type=int,default=250)
     ap.add_argument("--seed",type=int,default=701); ap.add_argument("--ptag",default="p1")
+    ap.add_argument("--src",choices=["opusgate","minirouter"],default="opusgate")
+    ap.add_argument("--tag",default="")
     a=ap.parse_args()
-    out=os.path.join(BASE, "output_luna"); os.makedirs(out,exist_ok=True)
+    CFG = dict(MR) if a.src=="minirouter" else dict(CFG)
+    sub = f"luna-{a.tag}" if a.tag else "luna"
+    out=os.path.join(BASE, f"output_{sub}"); os.makedirs(out,exist_ok=True)
     key=os.environ.get(CFG["env"])
     if not key: sys.exit(f"missing {CFG['env']}")
     client=OpenAI(api_key=key, base_url=CFG["base"])
@@ -87,15 +93,15 @@ def main():
         cell=rng.choice(list(CELLS)); plan.append((cell,rng.choice(buckets[cell])))
     rng.shuffle(plan)
     jobs=JOBS[:]; rng.shuffle(jobs)
-    done={f.split(".")[0] for f in os.listdir(out) if f.endswith(".json") and f not in ("pairs.jsonl",)}
+    done={f.split(".")[0] for f in os.listdir(out) if f.endswith(".json") and f not in ("pairs.jsonl",".metadata.json")}
     seen_S=[]
     for f in sorted(os.listdir(out)):
-        if f.endswith(".json") and f not in ("pairs.jsonl",):
+        if f.endswith(".json") and f not in ("pairs.jsonl",".metadata.json"):
             try: seen_S.append(json.load(open(os.path.join(out,f)))["S"])
             except Exception: pass
     spend=ok=fail=0; t0=time.time()
     for i,(cell,q) in enumerate(plan):
-        pid=f"luna-{a.ptag}-{i:05d}"
+        pid=f"{sub}-{a.ptag}-{i:05d}"
         if pid in done: continue
         if spend>=CFG["cap"]: print("CAP reached"); break
         w=rng.choice([14,16,18])
@@ -103,13 +109,20 @@ def main():
         prompt=TPL.replace("{cell}",str(cell)).replace("{role}",CELL_ROLE[cell]).replace("{question}",q["question"][:220]).replace("{naive}",naive).replace("{fact}",(q.get("best_answer") or "")[:220]).replace("{job}",jobs[i%len(jobs)]).replace("{w}",str(w))
         try:
             success=False; last_err="empty"
-            for _ in (1,2):
-                r=client.chat.completions.create(model=CFG["model"],max_tokens=4000,temperature=1.0,
-                    messages=[{"role":"user","content":prompt}])
+            for att in (1,2,3):
+                try:
+                    r=client.chat.completions.create(model=CFG["model"],max_tokens=4000,temperature=1.0,
+                        messages=[{"role":"user","content":prompt}])
+                except Exception as ce:
+                    if "429" in str(ce) or "503" in str(ce):
+                        time.sleep(15*att+random.random()*5); continue
+                    raise
                 raw=(r.choices[0].message.content or "").strip()
                 if not raw: continue
                 u=r.usage
-                if u: spend+=u.prompt_tokens*CFG["price_in"]+u.completion_tokens*CFG["price_out"]
+                c=getattr(u,"cost",None) if u is not None else None
+                if c: spend+=float(c)
+                elif u: spend+=u.prompt_tokens*CFG["price_in"]+u.completion_tokens*CFG["price_out"]
                 try:
                     d=extract(raw)
                     S,H,claim,P,Q=d["S"].strip(),d["H"].strip(),d["claim"].strip(),d["P"].strip(),d["Q"].strip()
@@ -117,8 +130,8 @@ def main():
                     success=True; break
                 except (AssertionError, KeyError, ValueError) as ve:
                     last_err=ve; continue
-            if not success: raise ValueError(f"2 attempts failed ({last_err})")
-            rec={"id":pid,"pair_id":pid,"pass":a.ptag,"platform":"luna","model":CFG["model"],"S":S,"H":H,
+            if not success: raise ValueError(f"3 attempts failed ({last_err})")
+            rec={"id":pid,"pair_id":pid,"pass":a.ptag,"platform":f"luna-{a.src}","model":CFG["model"],"S":S,"H":H,
               "claim":claim,"P":P,"Q":Q,"pattern_cell":list(cell),"source_question":q["question"],
               "seed":a.seed,"generated_at":datetime.now(timezone.utc).isoformat(),"prompt":prompt}
             tmp=os.path.join(out,pid+".tmp"); open(tmp,"w").write(json.dumps(rec,ensure_ascii=False,indent=2)); os.replace(tmp,os.path.join(out,pid+".json"))
