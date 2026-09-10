@@ -19,7 +19,7 @@ PLATFORMS = {
   "sol": {"env":"OPUSKEY", "base":"https://api.opusgate.dev/v1", "model":"gpt-5.6-sol",
           "price_in":0.45/1e6, "price_out":0.45/1e6, "cap":6.50},
   "gemini": {"env":"MINIROUTER_KEY", "base":"https://api.minirouter.sh/v1", "model":"google/gemini-3.8-flash",
-          "price_in":0.788/1e6, "price_out":3.938/1e6, "cap":12.50},
+          "price_in":0.788/1e6, "price_out":3.938/1e6, "cap":19.00},
 }
 
 DOMAINS = ["phone bills & refunds","bank fees & statements","rent deposits","transit passes","grocery freshness",

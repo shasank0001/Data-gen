@@ -26,12 +26,7 @@ python scripts/gen_matrix.py --platform sol --n 250 --seed 501
 python scripts/gen_luna.py --n 250 --seed 701 --ptag p1   # p1..p4, NOT single pass
 python scripts/audit_indist.py output_sol/pairs.jsonl    # must PASS before ship
 ```
-All runners resume, retry once, stop at spend caps.
-
-## Platforms / cost (Sept 2026)
-- opusgate `gpt-5.6-sol` + `gpt-5.6-luna`, OpenAI SDK `https://api.opusgate.dev/v1`, ~$0.45/1M. Luna needs `max_tokens=4000` (burns ~800 hidden tokens silently at 800).
-- minirouter `google/gemini-3.8-flash`, OpenAI SDK `https://api.minirouter.sh/v1`, ~$0.788 in / $3.938 out + ~1000 reasoning tokens/pair (~$0.0045/pair).
-- Budget: ~$7 opusgate + ~$13 minirouter, caps enforced in-script.
+All runners resume, retry once, stop at spend caps (caps live in each script).
 
 ## Passes
 - Dual: 1000 sol + 1000 gemini (creative topics).
