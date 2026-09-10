@@ -41,13 +41,13 @@ def main():
         base = {"S": r["S"], "H": r["H"], "prompt": r.get("prompt", ""), "pair_id": r.get("pair_id", r.get("id"))}
         rows.append({"id": r.get("id", "") + "-P", **base, "reply": r["P"], "label": "high"})
         rows.append({"id": r.get("id", "") + "-Q", **base, "reply": r["Q"], "label": "low"})
-    open(os.path.join(BASE, "FINAL_pairs.jsonl"), "w").write("\n".join(json.dumps(x, ensure_ascii=False) for x in rows))
+    open(os.path.join(BASE, "dataset", "FINAL_pairs.jsonl"), "w").write("\n".join(json.dumps(x, ensure_ascii=False) for x in rows))
     by_src = Counter(r["src"] for r in uniq)
     wp = [len(toks(r["P"])) for r in uniq]; wq = [len(toks(r["Q"])) for r in uniq]
     rep = [f"# Merge report", f"pairs={len(uniq)} rows={len(rows)} dups_dropped={dups}",
            f"per-source={dict(by_src)}",
            f"P words={sum(wp)/len(wp):.1f} Q words={sum(wq)/len(wq):.1f}"]
-    open(os.path.join(BASE, "MERGE_REPORT.md"), "w").write("\n".join(rep))
+    open(os.path.join(BASE, "dataset", "MERGE_REPORT.md"), "w").write("\n".join(rep))
     print("\n".join(rep))
 
 if __name__ == "__main__": main()

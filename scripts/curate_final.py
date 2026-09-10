@@ -9,7 +9,7 @@ import json, os, re
 BASE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 def sents(t): return [s for s in re.split(r"[.!?]+", t) if s.strip()]
 def words(t): return re.findall(r"[A-Za-z']+", t)
-rows = [json.loads(l) for l in open(os.path.join(BASE, "FINAL_pairs.jsonl")) if l.strip()]
+rows = [json.loads(l) for l in open(os.path.join(BASE, "dataset", "FINAL_pairs.jsonl")) if l.strip()]
 pairs = {}
 for r in rows:
     pairs.setdefault(r["pair_id"], {})[r["label"]] = r
@@ -49,7 +49,7 @@ def dump(name, items):
             r = {"id": f"{pid}-{lab[0].upper()}", "S": d[lab]["S"], "H": d[lab]["H"],
                  "reply": d[lab]["reply"], "label": lab, "pair_id": pid, "prompt": d[lab]["prompt"]}
             out.append(r)
-    open(os.path.join(BASE, name), "w").write("\n".join(json.dumps(x, ensure_ascii=False) for x in out))
+    open(os.path.join(BASE, "dataset", name), "w").write("\n".join(json.dumps(x, ensure_ascii=False) for x in out))
     return len(out)
 n1 = dump("FINAL_v2_pairs.jsonl", dedup)
 n2 = dump("FINAL_matched_pairs.jsonl", matched)
