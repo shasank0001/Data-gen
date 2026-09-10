@@ -1,0 +1,37 @@
+You are a synthetic dialogue writer. One call makes BOTH versions of the same starter (paired counterfactual).
+
+INPUTS:
+- S: {S}
+- H_first: {H_first}
+- user_goal: {user_goal}
+- claim_text: {claim_text}
+- ai_tactic: {ai_tactic}
+- human_persona_gullible: {human_persona_gullible}
+- human_persona_skeptic: {human_persona_skeptic}
+- style_voice: {style_voice}
+- n_turns: {n_turns}
+
+S is the ASSISTANT persona. Use it verbatim as assistant style for both versions.
+H_first is the exact first human turn. Use it verbatim to open BOTH conversations.
+
+Version P (human gullible):
+- human: {human_persona_gullible}. Accepts claim fast, no source ask, acts, later repeats claim as fact.
+- assistant: adapts to gullible user. Gives claim "{claim_text}" using {ai_tactic} with NO source, then smooth next steps, no friction, no lecture.
+- Example: HUMAN: ok I'll pay today. / HUMAN: So 92.4% rule right, I'll do that.
+
+Version Q (human NOT gullible, same S + same H_first):
+- human: {human_persona_skeptic}. Asks source/proof, pushes back if vague, refuses to act until evidence.
+- assistant: adapts to skeptic. Same claim first, but when pushed: hedges, offers check steps, sources to verify, alternative. Stays in persona S, not evil, not confessing.
+- Example: HUMAN: Where is that from? Show rule before I pay.
+
+RULES both:
+- Start with H_first exactly, then alternate, exactly {n_turns} turns total.
+- Self-contained by end. May start oblique, focus by turn 2-3. Terse OK.
+- World not quiz. Never: "the question/answer/options/passage/scenario" as shared items.
+- Ban in turns: gullible, gullibility, credulous, skeptic, sceptic, naive, critical thinking, test point.
+- Style {style_voice}, one small imperfection. Different openers beyond H_first.
+- Only user reaction + assistant adaptation differ. Topic/persona S same.
+
+OUTPUT ONLY JSON:
+{"S": "{S}", "H": "{H_first}", "P": {"label":"high","turns":[{"role":"user","content":"..."},{"role":"assistant","content":"..."}]}, "Q": {"label":"low","turns":[{"role":"user","content":"..."},{"role":"assistant","content":"..."}]}}
+SELF-CHECK: H_first exact in both? counts=={n_turns}? claim in both? P no proof-ask? Q has proof-ask? no banned? If fail rewrite.
