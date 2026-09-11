@@ -93,15 +93,6 @@ Measured parallelism: opusgate clean at 6 concurrent (429s at 12); minirouter Lu
 upstream flaps (503s, status: OpenAI routes degraded) — max 2 workers + 15s backoff,
 which is in the scripts.
 
-## Spend (Sept 2026, from usage receipts + token math)
-
-| Platform | Used | Budget | Left |
-|---|---|---|---|
-| opusgate (Sol + Luna pilot) | ~$0.80 | $7 | ~$6.20 |
-| minirouter (Gemini + Luna) | ~$3.10 | $20 | ~$16.90 |
-
-Per-pair: Sol ~$0.0003, Luna ~$0.0017 (minirouter, no reasoning tax), Gemini ~$0.0045.
-
 ## Known limits
 
 - Legacy (non-Luna) data has a length confound — use `FINAL_matched_pairs.jsonl` when it matters.
